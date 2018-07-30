@@ -1,38 +1,31 @@
 #print('你真是一头胖居居！')
 import random , re
 repeat = 'initial'
+norepeat = 'F'
+blacklist = []
 
 
-# ====================更新日志=======================
-log= """
-    更新日志
-    v0.3.1
-    优化了一小部分数据存储的方式(真的很小)
-    为什么还是出错啊啊啊啊啊
-    
-    v0.3
-    修复了很多bug
-    干不了艽
-    因为sbtx这个轮子已经坏了
-    
-    v0.2
-    重写了数据存储方式
-    干了艽
-    
-    v0.1
-    初步创建了阿瓦隆项目\n
+# ====================游戏版本=======================
+ver= """
+    v0.3.2
     """
 
 
 
 # ====================接收部分=======================
 def onQQMessage(bot,contact,member,content):
-    global repeat
+    global repeat , norepeat , blocklist
     
-    if bot.isMe(contact, member): #忽略自己的发言
-        pass
+    if bot.isMe(contact, member): #如果已经复读过就不在复读
+        if content == repeat:
+            norepeat = 'T'
+        else:
+            pass
     
     elif content == '': #忽略图片信息
+        pass
+
+    elif contact in blacklist:
         pass
     
     elif content == '-hello':
@@ -54,8 +47,21 @@ def onQQMessage(bot,contact,member,content):
     elif content == '-rule':
         bot.SendTo(contact, '请自行百度 阿瓦隆')
     
-    elif content == '-log':
-        bot.SendTo(contact, log)
+    elif content == '-ver':
+        bot.SendTo(contact, ver)
+
+    elif content == '-blacklist':
+        if blacklist == []:
+            bot.SendTo(contact, '现在没有人被拉黑了')
+        else:
+            bot.SendTo(contact, '%s' % blacklist)
+
+    elif '-bladd' in content:
+        blacklist.append(content[7:])
+        bot.SendTo(contact, '成功将%s加入到黑名单!' % content[7:])
+
+    elif '-bldel' in content:
+        if
     
     elif '-game' in content:
         gprocessor(bot, contact, member, content)
@@ -63,11 +69,28 @@ def onQQMessage(bot,contact,member,content):
     elif content == '-gj':
         bot.SendTo(contact, 'wtmgj!')
 
-    elif content == repeat:
-        bot.SendTo(contact, content)
-        
-    repeat = content
+    elif content == '-goo':
+        bot.SendTo(contact, '不干昍,不干昍')
 
+    elif content == '-gwls':
+        bot.SendTo(contact, '干自己!')
+
+    elif content == '-gtata':
+        bot.SendTo(contact, '我tm干爆tata!')
+
+    elif content == '-g2b':
+        bot.SendTo(contact, '学姐会伤心的')
+
+    elif content == '-gzy':
+        bot.SendTo(contact, 'van様')
+
+    elif content == repeat:
+        if norepeat == 'F':
+            bot.SendTo(contact, content)
+        
+    else:
+        repeat = content
+        norepeat = 'F'
 
 
 # ====================缺省值定义=======================
@@ -112,7 +135,7 @@ def processor(bot, contact, member, content, command):
 
 # ====================游戏中消息处理器=======================
 def gprocessor(bot, contact, member, content):
-    global gamestatus , gamememberslist , gamemembersrole , gamemembersnumber , defaultrounds , chatround , missionround , chatseq , chatseqnum , currentchat , currentcap , currentmission , currentmissionnum ,  chatvote , missionvote , votecount , succount , failcount , losecount
+    global gamestatus , gamememberslist , gamemembersrole , gamemembersnumber , defaultrounds , chatround , missionround , chatseq , chatcount , currentchat , currentcap , currentmission , currentmissionnum ,  chatvote , missionvote , votecount , succount , failcount , losecount ,roundrules
     
     if content == '-gamehelp':
         bot.SendTo(contact, '游戏帮助: \n'
@@ -123,7 +146,7 @@ def gprocessor(bot, contact, member, content):
                    '-gamepass 跳过自己的发言\n'
                    '-gamecheck 检查游戏进行状态\n'
                    '-gamevote 检查投票\n'
-                   '-gamerole 检查游戏阵容')
+                   '-gamerole (请私聊发送)查看自己的身份')
     
     
     
@@ -133,11 +156,11 @@ def gprocessor(bot, contact, member, content):
         elif not gamestatus == 'Waiting':
             bot.SendTo(contact, '大家正在玩儿呢,下一把再来吧')
         else:
-            if member.name in gamememberslist:
-                bot.SendTo(contact, '%s已经报过名了' % member.name)
+            if member.nick in gamememberslist:
+                bot.SendTo(contact, '%s已经报过名了' % member.nick)
             else:
-                gamememberslist[member.name] = [member , 0 , 'UnassignedRole']
-                bot.SendTo(contact, '%s成功加入了战斗' % member.name)
+                gamememberslist[member.nick] = [member , 0 , 'UnassignedRole']
+                bot.SendTo(contact, '%s成功加入了战斗' % member.nick)
 
 
 
@@ -147,11 +170,11 @@ def gprocessor(bot, contact, member, content):
         elif not gamestatus == 'Waiting':
             bot.SendTo(contact, '鸽你麻痹，打完这一把再干你')
         else:
-            if not member.name in gamememberslist:
-                bot.SendTo(contact, '%s你先报名再鸽好不好' % member.name)
+            if not member.nick in gamememberslist:
+                bot.SendTo(contact, '%s你先报名再鸽好不好' % member.nick)
             else:
-                gamememberslist.pop(member.name)
-                bot.SendTo(contact, '%s鸽了,干%s!' % (member.name , member.name))
+                gamememberslist.pop(member.nick)
+                bot.SendTo(contact, '%s鸽了,干%s!' % (member.nick , member.nick))
 
 
 
@@ -171,71 +194,74 @@ def gprocessor(bot, contact, member, content):
             elif len(gamememberslist) > 10:
                 bot.SendTo(contact, '游戏人数多于10人，无法开始')
             else:
+                #分配号码和身份
+                numberassign()
+                roleassign()
+                
                 #初始化游戏数值
-                chatround , missionround , chatseq , chatseqnum = 1 , 1 , 1 , 0
-                currentchat , currentcap = gamemembersnumber[0] , gamemembersnumber[0]
+                chatround , missionround , chatseq , chatcount = 1 , 1 , 1 , 0
                 currentmission ,currentmissionnum = [] , []
                 chatvote = {}
                 missionvote = {}
                 votecount = 0
                 succount , failcount , losecount = 0 , 0 , 0
-                #分配号码和身份
-                numassign()
-                roleassign()
+                currentchat , currentcap = gamemembersnumber[1] , gamemembersnumber[1]
                     
-                for tempname in gamememberslist:#私聊发送身份和编号
-                    tempqc = bot.List('buddy','tempname')
-                    contact.ctype = 'buddy'
-                    checkrole(bot, contact, tempqc, content)
-                    checknumber(bot, contact, tempqc, content)
-                    checknumber(bot, contact, member, content)#群内发送编号
+                #for tempname in gamememberslist:      #改天再来钻研如何不回复就私聊发送
+                    #tempqc = bot.List('buddy','tempname')
+                    #contact.ctype = 'buddy'
+                    #checkrole(bot, contact, tempqc, content)
+                    #checknumber(bot, contact, tempqc, content)
+                    #checknumber(bot, contact, member, content)
 
                 roundrules = defaultrounds[len(gamememberslist)] #读取当前游戏规则
                 
-                bot.SendTo(contact, '玩家身份已私聊发送,请注意查看')#开始游戏
-                bot.SendTo(contact, '下面是第%d轮出征的第%d次决策投票,请队长选择发言顺序:'
-                               '发送-gamewxl自己先发言,发送-gamewzh自己最后发言' % (missionround , chatround))
+                bot.SendTo(contact, '请私聊发送-gamerole来查看自己的身份') #开始游戏
+                bot.SendTo(contact, '下面是第%d轮出征的第%d次决策投票,请队长%s选择发言顺序:'
+                               '发送-gamewxl自己先发言,发送-gamewzh自己最后发言' % (missionround , chatround , currentcap))
 
 
 
-    elif content == '-gamewxl' or '-gamewzh': #队长选择发言顺序
-        if not member.name == currentcap:
+    elif content == '-gamewxl' or content == '-gamewzh': #队长选择发言顺序
+        if not member.nick == currentcap:
             bot.SendTo(contact, '你哪只眼睛看到你是队长了?')
         else:
             if content == '-gamewxl':
-                chatseqcheck(chatseq)
+                chatseq = chatseqcheck(chatseq)
                 bot.SendTo(contact, '队长已选择自己发言,请%d号玩家%s发言。发送-gamepass结束发言' % (chatseq , gamemembersnumber[chatseq]))
             elif content == '-gamewzh':
                 chatseq = chatseq + 1
-                chatseqcheck(chatseq)
+                chatseq = chatseqcheck(chatseq)
+                currentchat = gamemembersnumber[chatseq]
                 bot.SendTo(contact, '队长已选择下家发言,请%d号玩家%s发言。发送-gamepass结束发言' % (chatseq , gamemembersnumber[chatseq]))
 
 
 
     elif content == '-gamepass': #结束发言
-        if not member.name == currentchat:
+        if not member.nick == currentchat:
             bot.SendTo(contact, '不是你发言你闭zui!')
             
-        elif member.name == currentchat:
+        elif member.nick == currentchat:
             chatseq = chatseq + 1
-            chatseqcheck(chatseq)
-            chatseqnum = chatseqnum + 1
+            chatseq = chatseqcheck(chatseq)
+            chatcount = chatcount + 1
                 
-        if chatseqnum <= 6: #判断是否所有人都发言
-            bot.SendTo(contact, '%d号玩家%s发言已结束,接下来是%d号玩家%s发言。发送-gamepass结束发言' % (chatseq - 1 , gamemembersnumber[chatseq - 1] , chatseq , gamemembersnumber[chatseq]))
+            if chatcount < len(gamememberslist): #判断是否所有人都发言
+                currentchat = gamemembersnumber[chatseq]
+                bot.SendTo(contact, '上个玩家发言已结束,现在是%d号玩家%s发言。发送-gamepass结束发言' % (chatseq , gamemembersnumber[chatseq]))
                 
-        elif chatseqnum > 6:
-            bot.SendTo(contact, '所有玩家发言结束,请队长指定出征的成员,本次需要指定%d名成员,需要%d名' % (roundrules[0][missionround - 1] , roundrules[1][missionround - 1]))
-            bot.SendTo(contact,'请队长发送-gamemis [编号][编号](玩家编号不用加中括号,用空格来隔开)来指定本次任务的执行人')
-            chatseqnum = 0
+            elif chatcount >= len(gamememberslist):
+                bot.SendTo(contact, '所有玩家发言结束,请队长指定出征的成员,本次需要指定%d名成员,需要%d个成功' % (roundrules[0][missionround - 1] , roundrules[1][missionround - 1]))
+                bot.SendTo(contact,'请队长发送-gamemis [编号][编号](玩家编号不用加中括号,用空格来隔开)来指定本次任务的执行人')
+                chatcount = 0
 
 
 
     elif '-gamemis' in content: #队长指定出征人员
-        if not member.name == currentcap:
+        if not member.nick == currentcap:
             bot.SendTo(contact, '你又哪只眼睛看到你是队长了?')
         else:
-            currentmissionnum == re.findall(r'(\w*[0-9]+)\w*',content)
+            currentmissionnum = re.findall(r'(\w*[0-9]+)\w*',content)
             for temp in currentmissionnum:
                 currentmission.append(gamemembersnumber[int(temp)])
                 bot.SendTo(contact, '当前拟定出征的是%s,请在群里回复-gameac来支持,回复-gamedn来反对' % currentmission)
@@ -243,20 +269,21 @@ def gprocessor(bot, contact, member, content):
 
 
 
-    elif content == '-gameac' or '-gamedn': #聊天投票
+    elif content == '-gameac' or content == '-gamedn': #聊天投票
         if not contact.ctype == 'group':
             bot.SendTo(contact, '请勿私聊你的决定')
-        elif not member.name in gamememberslist:
+        elif not member.nick in gamememberslist:
             bot.SendTo(contact, '请不要瞎凑热闹')
         else:
-            if member.name in chatvote['第%d次出征%d轮讨论' % (missionround , chatround)]:
+            chatvote['第%d次出征%d轮讨论' % (missionround , chatround)] = {}
+            if member.nick in chatvote['第%d次出征%d轮讨论' % (missionround , chatround)]:
                 bot.SendTo(contact, '谁又在重复投票?')
             else:
                 if content == '-gameac':
-                    chatvote['第%d次出征%d轮讨论' % (missionround , chatround)][member.name] = '同意'
+                    chatvote['第%d次出征%d轮讨论' % (missionround , chatround)][member.nick] = '同意'
                     chatvoteac = chatvoteac + 1
                 elif content == '-gamedn':
-                    chatvote['第%d次出征%d轮讨论' % (missionround , chatround)][member.name] = '反对'
+                    chatvote['第%d次出征%d轮讨论' % (missionround , chatround)][member.nick] = '反对'
                     chatvotedn = chatvotedn + 1
                     #聊天投票判断
                 if len(chatvote['第%d次出征%d轮讨论' % (missionround , chatround)]) >= len(gamememberslist):
@@ -298,20 +325,20 @@ def gprocessor(bot, contact, member, content):
 
 
 
-    elif content == '-gamesu' or '-gamedn': #出征投票
+    elif content == '-gamesu' or content == '-gamedn': #出征投票
         if not contact.ctype == 'buddy':
             bot.SendTo(contact, '你是想大家知道你是坏蛋吗?')
-        elif not member.name in currentmission:
+        elif not member.nick in currentmission:
             bot.SendTo(contact, '你哪只眼睛看到队长选你了?')
         else:
-            if member.name in missionvote['第%d次出征' % missionround]:
+            if member.nick in missionvote['第%d次出征' % missionround]:
                 bot.SendTo(contact, '请不要重复投票!')
             else:
                 if content == '-gamesu':
-                    missionvote['第%d次出征' % missionround][member.name] = '成功'
+                    missionvote['第%d次出征' % missionround][member.nick] = '成功'
                     missionvotesu = missionvotesu + 1
                 elif content == '-gamedn':
-                    missionvote['第%d次出征' % missionround][member.name] = '失败'
+                    missionvote['第%d次出征' % missionround][member.nick] = '失败'
                     missionvotedn = missionvotedn + 1
                     #任务投票判断
                 if len(missionvote['第%d次出征' % missionround]) >= len(currentmission):
@@ -348,7 +375,7 @@ def gprocessor(bot, contact, member, content):
 
 
     elif '-gamekill' in content:
-        if not gamememberslist[member.name][2] == 'Assassin':
+        if not gamememberslist[member.nick][2] == 'Assassin':
             bot.SendTo(contact, '你真的是刺客么')
             
         else:
@@ -379,8 +406,12 @@ def gprocessor(bot, contact, member, content):
 
 
     elif content == '-gamerole':
-        bot.SendTo(contact, '还是开发ing')
+        checkrole(bot, contact, member, content)
 
+
+
+    else:
+        bot.SendTo(contact, '致命错误!请告诉oo并干oo!')
 
 
 
@@ -420,7 +451,7 @@ def numberassign(): #号码分配
     i0 = 0
     for tempname in gamememberslist:
         gamememberslist[tempname][1] = numassign[i0] + 1
-        gamemembersnumber[numassign[i0] + 1] = tname
+        gamemembersnumber[numassign[i0] + 1] = tempname
         i0 = i0 + 1
 
 
@@ -429,12 +460,12 @@ def numberassign(): #号码分配
 def checkrole(bot, contact, member, content):
     global gamememberslist ,roassign
     
-    if contact.ctype == 'buddy' and contact.name in gamememberslist: #检查是不是私聊
-        tempqc = bot.List('buddy' , contact.name)
+    if contact.ctype == 'buddy' and contact.nick in gamememberslist: #检查是不是私聊
+        tempqc = bot.List('buddy' , contact.nick)
         if tempqc:
-            bot.SendTo(tempqc[0], '你的身份是%s' % gamememberslist[contact.name][2])
+            bot.SendTo(tempqc[0], '你的身份是%s' % gamememberslist[contact.nick][2])
             
-            if gamememberslist[contact.name][2] == 'Merlin':
+            if gamememberslist[contact.nick][2] == 'Merlin':
                 merlinlist = []
                 if 'Oberyn' in roassign:
                     merlinlist.append(gamemembersrole['Oberyn'])
@@ -447,15 +478,15 @@ def checkrole(bot, contact, member, content):
                 random.shuffle(merlinlist)
                 bot.SendTo(tempqc[0] , '玩家%s是大坏淫' % merlinlist)
             
-            if gamememberslist[contact.name][2] == 'Percival':
+            if gamememberslist[contact.nick][2] == 'Percival':
                 percivalist = [gamemembersrole['Morgana'] , gamemembersrole['Merlin']]
                 random.shuffle(percivalist)
                 bot.SendTo(tempqc[0] , '玩家%s是绝世双雄' % percivalist)
             
-            if gamememberslist[contact.name][2] == 'Loyale':
+            if gamememberslist[contact.nick][2] == 'Loyale':
                 pass
             
-            if gamememberslist[contact.name][2] == 'Mordred':
+            if gamememberslist[contact.nick][2] == 'Mordred':
                 mordredlist = []
                 if 'Morgana' in roassign:
                     mordredlist.append(gamemembersrole['Morgana'])
@@ -466,7 +497,7 @@ def checkrole(bot, contact, member, content):
                 random.shuffle(mordredlist)
                 bot.SendTo(tempqc[0], '玩家%s和里一样是大坏淫' % mordredlist)
             
-            if gamememberslist[contact.name][2] == 'Morgana':
+            if gamememberslist[contact.nick][2] == 'Morgana':
                 morganalist = []
                 if 'Mordred' in roassign:
                     morganalist.append(gamemembersrole['Mordred'])
@@ -477,10 +508,10 @@ def checkrole(bot, contact, member, content):
                 random.shuffle(morganalist)
                 bot.SendTo(tempqc[0], '玩家%s和里一样是大坏淫' % morganalist)
             
-            if gamememberslist[contact.name][2] == 'Oberyn':
+            if gamememberslist[contact.nick][2] == 'Oberyn':
                 pass
             
-            if gamememberslist[contact.name][2] == 'Assassin':
+            if gamememberslist[contact.nick][2] == 'Assassin':
                 assassinlist = []
                 if 'Mordred' in roassign:
                     assassinlist.append(gamemembersrole['Mordred'])
@@ -491,7 +522,7 @@ def checkrole(bot, contact, member, content):
                 random.shuffle(assassinlist)
                 bot.SendTo(tempqc[0], '玩家%s和里一样是大坏淫' % assassinlist)
             
-            if gamememberslist[contact.name][2] == 'Lackey':
+            if gamememberslist[contact.nick][2] == 'Lackey':
                 lackeylist = []
                 if 'Mordred' in roassign:
                     lackeylist.append(gamemembersrole['Mordred'])
@@ -507,10 +538,10 @@ def checkrole(bot, contact, member, content):
 def checknumber(bot, contact, member, content):
     global gamememberslist
     
-    if contact.ctype == 'buddy' and member.name in gamememberslist: #私下问编号
-        tempqc = bot.List('buddy' , member.name)
+    if contact.ctype == 'buddy' and member.nick in gamememberslist: #私下问编号
+        tempqc = bot.List('buddy' , member.nick)
         if tempqc:
-            bot.SendTo(tempqc[0] , '你的编号是%d号' % gamememberslist[member.name][1])
+            bot.SendTo(tempqc[0] , '你的编号是%d号' % gamememberslist[member.nick][1])
 
     elif contact.ctype == 'group': #群中问编号
         for tempname in gamememberslist:
@@ -533,7 +564,7 @@ def chatseqcheck(seqnum): #序列调整
 
 
 def newcap(curcap):
-    global gamemembersnumber , chatseqcheck , gamememberslist
+    global gamemembersnumber , gamememberslist
     
     tempnum1 = gamemembersnumber[curcap] + 1
     tempnum2 = chatseqcheck(tempnum1)
