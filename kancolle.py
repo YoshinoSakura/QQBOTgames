@@ -154,7 +154,7 @@ def onQQMessage(bot, contact, member, content):
     elif content == '-roll':
         tnumber = random.random()
         tnumber = int(tnumber * 100)
-        sleepsend(bot , contact, '%s随机到%d点!' % (member, tnumber))
+        sleepsend(bot , contact, '%s随机到%d点!' % (member.nick, tnumber))
 
 
 
@@ -246,10 +246,14 @@ def onQQMessage(bot, contact, member, content):
     elif content == repeat:
         if norepeat == 'F':
             sleepsend(bot , contact, content)
-    
-        else:
-            repeat = content
-            norepeat = 'F'
+
+
+
+
+
+    else: #记录复读内容
+        repeat = content
+        norepeat = 'F'
 
 
 
